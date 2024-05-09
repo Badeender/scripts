@@ -1,5 +1,5 @@
 #!/bin/bash
-# ntp-zones.sh - Script to gather NTP server zone information from the NTP Pool Project
+# ntp_zones.sh - Script to gather NTP server zone information from the NTP Pool Project
 #
 # This script retrieves the zones of NTP servers based on their IP addresses from the NTP Pool Project website.
 # It first checks if the information is already cached locally, downloads the necessary data if not cached,
@@ -28,19 +28,15 @@
 # - awk
 # - grep
 #
-# The script caches downloaded pages in the 'ntp_cache' directory and uses cookies to handle session data.
+# The script caches downloaded pages in the 'ntp_cache' directory.
 # Verbose output from `curl` is logged to 'ntp_cache/curl_verbose.log'.
 
-
 # Input file with sorted unique IPs and counts
-input_file="sorted_pool.txt"
+input_file="sorted_pool_test.txt"
 
 # Directory to cache pages
 cache_dir="ntp_cache"
 mkdir -p "$cache_dir"
-
-# Cookie file for curl
-cookie_file="$cache_dir/cookies.txt"
 
 # Log file for verbose curl output
 curl_log="$cache_dir/curl_verbose.log"
@@ -69,12 +65,12 @@ do
     cache_file="$cache_dir/$ip.html"
 
     if ! is_cloudflare_ip "$ip"; then
-        echo "https://www.ntppool.org/scores/$ip -o $cache_file" >> "$url_list_file"
+        echo "--url https://www.ntppool.org/scores/$ip -z $cache_file -o $cache_file" >> "$url_list_file"
     fi
 done < "$input_file"
 
-# Download all pages using curl with compression, cookies, conditional fetching, and verbose logging
-cat "$url_list_file" | xargs -n 3 bash -c 'curl -s --compressed -b "$cookie_file" -c "$cookie_file" -z "$2" "$0" -o "$2" -v >> "$curl_log" 2>&1'
+# Download all pages using a single curl command with parallel processing and verbose logging
+curl --compressed --keepalive-time 60 -v $(cat "$url_list_file") >> "$curl_log" 2>&1
 
 # Process each IP to print the count, IP, and zones
 while IFS= read -r line
@@ -94,4 +90,3 @@ do
 done < "$input_file"
 
 echo "Verbose output written to $curl_log."
-
